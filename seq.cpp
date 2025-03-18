@@ -11,34 +11,72 @@
 
 using namespace std;
 
-int main() {
+int main(int argc, char **argv) {
     // -------------------------------
     // 1) Simulation Parameters
     // -------------------------------
-    const int n = 200;          // Number of grid points in each dimension
-    const double Lx = 200.0;      // Domain size in x-direction
-    const double Ly = 200.0;      // Domain size in y-direction
-
-    const double dx = Lx / n;
-    const double dy = Ly / n;
+    int n = 200;          // Number of grid points in each dimension
+    double Lx = 200.0;      // Domain size in x-direction
+    double Ly = 200.0;      // Domain size in y-direction
 
     // Time-stepping parameters
-    const double dt = 0.01;   
-    const int num_steps = 5000;
+    double dt = 0.01;   
+    int num_steps = 5000;
     
     //tmax = 500
     //dt
     // PDE parameters
     //const double alpha = 1.0;
-    const double alpha = 2.0;
-    const double beta  = -0.5; 
+    double alpha = 2.0;
+    double beta  = -0.5; 
 
     // checksum
     double checksum = 0;
 
+    std::vector <std::string> argument({argv, argv+argc});
 
-   
-    
+    for (long unsigned int i = 1; i<argument.size() ; i += 2){
+        std::string arg = argument[i];
+        if(arg=="-h"){ // Write help
+            std::cout << "./fwc --n <Number of grid points in each dimension>"
+                      << " --Lx, Ly <Domain size in x/y-direction>"
+                      << " --dt <timestep size>"
+                      << " --num_steps <Number of timesteps>"
+                      << " --alpha <alpha CGLE>"
+                      << " --beta <beta CGLE>\n";
+
+            exit(0);
+        } else if (i == argument.size() - 1){
+            throw std::invalid_argument("The last argument (" + arg +") must have a value");
+        } else if(arg=="--n"){
+            if ((n = std::stoi(argument[i+1])) < 0) 
+                throw std::invalid_argument("n must be positive (e.g. -n 1000)");
+        } else if(arg=="--Lx"){
+            if ((Lx = std::stoi(argument[i+1])) < 0) 
+                throw std::invalid_argument("Lx must be positive (e.g. -Lx 1000)");
+        } else if(arg=="--Ly"){
+            if ((Ly = std::stoi(argument[i+1])) < 0) 
+                throw std::invalid_argument("Ly must be positive (e.g. -Ly 1000)");
+        } else if(arg=="--dt"){
+            if ((dt = std::stod(argument[i+1])) < 0) 
+                throw std::invalid_argument("dt must be positive (e.g. -dt 0.01)");
+        } else if(arg=="--num_steps"){
+            if ((num_steps = std::stoi(argument[i+1])) < 0) 
+                throw std::invalid_argument("num_steps must be positive (e.g. -num_steps 1000)");
+        } else if(arg=="--alpha"){
+            if ((alpha = std::stod(argument[i+1])) < 0) 
+                throw std::invalid_argument("alpha must be positive (e.g. -alpha 1.1)");
+        } else if(arg=="--beta"){
+            if ((beta = std::stod(argument[i+1])) < 0) 
+                throw std::invalid_argument("alpha must be positive (e.g. -beta 1.1)");
+        } else{
+            std::cout << "---> error: the argument type is not recognized \n";
+        }
+    }
+
+
+    const double dx = Lx / n;
+    const double dy = Ly / n;
 
     // -------------------------------
     // 2) Allocate and Initialize Grids
@@ -183,7 +221,7 @@ int main() {
          << "Final u at center : " << u[center_idx] << "\n"
          << "Final v at center : " << v[center_idx] << "\n"
          << "Checksum mag_sq   : " << checksum << "\n"
-         << "Elapsed time      :" << std::setw(6) << std::setprecision(6) << (tend - tstart).count()*1e-9 << "\n"
+         << "Elapsed time [s]  : " << std::setw(6) << std::setprecision(5) << (tend - tstart).count()*1e-9 << "\n"
          << "Initial conditions: initial_u.csv, initial_v.csv\n"
          << "Final conditions:   diffusion_u.csv, diffusion_v.csv\n";
 
