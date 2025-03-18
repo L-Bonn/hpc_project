@@ -10,7 +10,24 @@
 
 using namespace std;
 
+void initialise_random(vector<double> &u, vector<double> &v, int &n, int &seed, bool &random_seed){
+    // initialise field with random number
+    // Use a Mersenne Twister PRNG and a uniform distribution [0,1].
+    std::mt19937 rng(seed);
+    if (random_seed==true){
+        std::mt19937 rng(static_cast<unsigned>(std::time(nullptr)));
+    }
+        
 
+    std::uniform_real_distribution<double> dist(-0.5, 0.5);
+
+    for (int j = 0; j < n; ++j) {
+        for (int i = 0; i < n; ++i) {
+            u[j * n + i] = dist(rng);  // random in [0,1]
+            v[j * n + i] = dist(rng);  // random in [0,1]
+        }
+    }
+}
 
 void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, const double &dx, double &dt,
               double &alpha, double &beta, double &checksum){
@@ -91,6 +108,7 @@ int main(int argc, char **argv) {
     // Time-stepping parameters
     double dt = 0.01;   
     int num_steps = 5000;
+    bool random_seed = false;
     
     //tmax = 500
     //dt
@@ -138,6 +156,8 @@ int main(int argc, char **argv) {
         } else if(arg=="--beta"){
             if ((beta = std::stod(argument[i+1])) < 0) 
                 throw std::invalid_argument("alpha must be positive (e.g. -beta 1.1)");
+        } else if(arg=="--random_seed"){
+            (random_seed = std::stoi(argument[i+1]));
         } else{
             std::cout << "---> error: the argument type is not recognized \n";
         }
@@ -157,17 +177,8 @@ int main(int argc, char **argv) {
     // -------------------------------
     // 2a) Random Initial Conditions
     // -------------------------------
-    // Use a Mersenne Twister PRNG and a uniform distribution [0,1].
-    //std::mt19937 rng(static_cast<unsigned>(std::time(nullptr)));
-    std::mt19937 rng(42);
-    std::uniform_real_distribution<double> dist(-0.5, 0.5);
-
-    for (int j = 0; j < n; ++j) {
-        for (int i = 0; i < n; ++i) {
-            u[j * n + i] = dist(rng);  // random in [0,1]
-            v[j * n + i] = dist(rng);  // random in [0,1]
-        }
-    }
+    int seed = 42;
+    initialise_random(u, v, n, seed, random_seed);
 
     // -------------------------------
     // 2b) Write INITIAL conditions to CSV
