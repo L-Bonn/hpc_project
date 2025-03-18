@@ -130,7 +130,8 @@ int main(int argc, char **argv) {
                       << " --dt <timestep size>"
                       << " --num_steps <Number of timesteps>"
                       << " --alpha <alpha CGLE>"
-                      << " --beta <beta CGLE>\n";
+                      << " --beta <beta CGLE>"
+                      << " --random_seed <whether to seed initial conditions randomly>\n";
 
             exit(0);
         } else if (i == argument.size() - 1){
