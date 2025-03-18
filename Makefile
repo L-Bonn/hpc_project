@@ -2,7 +2,7 @@
 
 # Compiler and flags
 CXX = g++
-CXXFLAGS = -O2 -std=c++11
+CXXFLAGS = -O3 -std=c++11
 
 # Target executable name
 TARGET = seq

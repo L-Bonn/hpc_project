@@ -85,8 +85,6 @@ int main() {
     // -------------------------------
     // 3) Main Time-Stepping Loop
     // -------------------------------
-    // We'll add a simple progress bar that updates every 10,000 steps.
-    // Feel free to adjust the frequency or style.
     for (int step = 0; step < num_steps; ++step) {
         
         // Update all grid points with periodic BC
@@ -139,28 +137,9 @@ int main() {
         // Swap old and new
         u = u_new;
         v = v_new;
-
-        // -------------------------------
-        // Progress Bar Update
-        // -------------------------------
-        // Update every 10,000 steps (feel free to change).
-        if (step % 10000 == 0) {
-            double progress = (double)step / (double)num_steps;
-            int barWidth = 70;  // width of the progress bar in characters
-
-            cout << "[";
-            int pos = (int)(barWidth * progress);
-            for (int b = 0; b < barWidth; ++b) {
-                if (b < pos) cout << "=";
-                else if (b == pos) cout << ">";
-                else cout << " ";
-            }
-            cout << "] " << int(progress * 100.0) << " %\r";
-            cout.flush();
-        }
     }
-    // Print a final newline so the progress bar doesn't overwrite the next output
-    cout << endl;
+
+
 
     // -------------------------------
     // 4) Write FINAL Grids to CSV
