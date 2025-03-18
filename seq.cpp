@@ -8,8 +8,72 @@
 #include <iomanip>
 
 
-
 using namespace std;
+
+
+
+void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, const double &dx, double &dt,
+              double &alpha, double &beta, double &checksum){
+
+    vector<double> u_new(n * n, 0.0);
+    vector<double> v_new(n * n, 0.0);
+
+    for (int step = 0; step < num_steps; ++step) {
+        
+        // Update all grid points with periodic BC
+        for (int j = 0; j < n; ++j) {
+            int jm = (j - 1 + n) % n;  
+            int jp = (j + 1) % n;
+
+            for (int i = 0; i < n; ++i) {
+                int im = (i - 1 + n) % n;  
+                int ip = (i + 1) % n;
+
+                int idx = j * n + i;
+
+                double u_val = u[idx];
+                double v_val = v[idx];
+
+                // Periodic neighbors
+                double u_ip = u[j * n + ip];
+                double u_im = u[j * n + im];
+                double u_jp = u[jp * n + i];
+                double u_jm = u[jm * n + i];
+
+                double v_ip = v[j * n + ip];
+                double v_im = v[j * n + im];
+                double v_jp = v[jp * n + i];
+                double v_jm = v[jm * n + i];
+
+                // Laplacians (5-point stencil, dx=dy)
+                double lap_u = (u_ip + u_im + u_jp + u_jm - 4.0 * u_val) / (dx * dx);
+                double lap_v = (v_ip + v_im + v_jp + v_jm - 4.0 * v_val) / (dx * dx);
+
+                // PDE system:
+                // du/dt = (Δu - αΔv) + u - (u - βv)(u^2 + v^2)
+                // dv/dt = (αΔu + Δv) + v - (βu + v)(u^2 + v^2)
+                double mag_sq = u_val * u_val + v_val * v_val;
+                checksum += mag_sq;
+                double rhs_u = (lap_u - alpha * lap_v) 
+                             + u_val 
+                             - (u_val - beta * v_val) * mag_sq;
+
+                double rhs_v = (alpha * lap_u + lap_v) 
+                             + v_val 
+                             - (beta * u_val + v_val) * mag_sq;
+
+                // Explicit update
+                u_new[idx] = u_val + dt * rhs_u;
+                v_new[idx] = v_val + dt * rhs_v;
+            }
+        }
+
+        // Swap old and new
+        u = u_new;
+        v = v_new;
+    }
+}
+
 
 int main(int argc, char **argv) {
     // -------------------------------
@@ -84,8 +148,6 @@ int main(int argc, char **argv) {
     // -------------------------------
     vector<double> u(n * n, 0.0);
     vector<double> v(n * n, 0.0);
-    vector<double> u_new(n * n, 0.0);
-    vector<double> v_new(n * n, 0.0);
 
     // -------------------------------
     // 2a) Random Initial Conditions
@@ -133,60 +195,9 @@ int main(int argc, char **argv) {
     // 3) Main Time-Stepping Loop
     // -------------------------------
     auto tstart = std::chrono::high_resolution_clock::now();
-    for (int step = 0; step < num_steps; ++step) {
-        
-        // Update all grid points with periodic BC
-        for (int j = 0; j < n; ++j) {
-            int jm = (j - 1 + n) % n;  
-            int jp = (j + 1) % n;
 
-            for (int i = 0; i < n; ++i) {
-                int im = (i - 1 + n) % n;  
-                int ip = (i + 1) % n;
-
-                int idx = j * n + i;
-
-                double u_val = u[idx];
-                double v_val = v[idx];
-
-                // Periodic neighbors
-                double u_ip = u[j * n + ip];
-                double u_im = u[j * n + im];
-                double u_jp = u[jp * n + i];
-                double u_jm = u[jm * n + i];
-
-                double v_ip = v[j * n + ip];
-                double v_im = v[j * n + im];
-                double v_jp = v[jp * n + i];
-                double v_jm = v[jm * n + i];
-
-                // Laplacians (5-point stencil, dx=dy)
-                double lap_u = (u_ip + u_im + u_jp + u_jm - 4.0 * u_val) / (dx * dx);
-                double lap_v = (v_ip + v_im + v_jp + v_jm - 4.0 * v_val) / (dx * dx);
-
-                // PDE system:
-                // du/dt = (Δu - αΔv) + u - (u - βv)(u^2 + v^2)
-                // dv/dt = (αΔu + Δv) + v - (βu + v)(u^2 + v^2)
-                double mag_sq = u_val * u_val + v_val * v_val;
-                checksum += mag_sq;
-                double rhs_u = (lap_u - alpha * lap_v) 
-                             + u_val 
-                             - (u_val - beta * v_val) * mag_sq;
-
-                double rhs_v = (alpha * lap_u + lap_v) 
-                             + v_val 
-                             - (beta * u_val + v_val) * mag_sq;
-
-                // Explicit update
-                u_new[idx] = u_val + dt * rhs_u;
-                v_new[idx] = v_val + dt * rhs_v;
-            }
-        }
-
-        // Swap old and new
-        u = u_new;
-        v = v_new;
-    }
+    // num_steps, n, u, v, dx, alpha, beta, checksum
+    simulate(num_steps, n, u, v, dx, dt, alpha, beta, checksum);
     auto tend = std::chrono::high_resolution_clock::now();
 
 
