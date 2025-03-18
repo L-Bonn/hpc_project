@@ -15,8 +15,13 @@ using namespace std;
 void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, const double &dx, double &dt,
               double &alpha, double &beta, double &checksum){
 
-    vector<double> u_new(n * n, 0.0);
-    vector<double> v_new(n * n, 0.0);
+
+    /*
+    Main timestepping loop
+    */
+
+    //vector<double> u_new(n * n, 0.0);
+    //vector<double> v_new(n * n, 0.0);
 
     for (int step = 0; step < num_steps; ++step) {
         
@@ -63,14 +68,14 @@ void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, cons
                              - (beta * u_val + v_val) * mag_sq;
 
                 // Explicit update
-                u_new[idx] = u_val + dt * rhs_u;
-                v_new[idx] = v_val + dt * rhs_v;
+                u[idx] = u_val + dt * rhs_u;
+                v[idx] = v_val + dt * rhs_v;
             }
         }
 
         // Swap old and new
-        u = u_new;
-        v = v_new;
+        //u = u_new;
+        //v = v_new;
     }
 }
 
