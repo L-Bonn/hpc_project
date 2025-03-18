@@ -1,7 +1,7 @@
 # Makefile for the diffusion simulation project
 
 # Compiler and flags
-CXX = g++
+CXX = nvc++
 CXXFLAGS = -O3 -std=c++11
 
 # Target executable name
