@@ -31,8 +31,8 @@ void initialise_random(vector<double> &u, vector<double> &v, int &n, int &seed, 
 
 int write_init(vector<double> &u, vector<double> &v, int &n){
         // write initial conditions to file
-        ofstream init_u("initial_u.csv");
-        ofstream init_v("initial_v.csv");
+        ofstream init_u("data/initial_u.csv");
+        ofstream init_v("data/initial_v.csv");
 
         if (!init_u.is_open() || !init_v.is_open()) {
             cerr << "Error: Could not open initial condition CSV files." << endl;
@@ -56,8 +56,36 @@ int write_init(vector<double> &u, vector<double> &v, int &n){
         return 0;
     }
 
+int write_u_v(vector<double> &u, vector<double> &v, int &n, int &frame){
+    std::string strframe = std::to_string(frame);
+    ofstream init_u("data/u"+strframe+".csv");
+    ofstream init_v("data/v"+strframe+".csv");
+
+    if (!init_u.is_open() || !init_v.is_open()) {
+        cerr << "Error: Could not open initial condition CSV files." << endl;
+        return 1;
+    }
+
+    for (int j = 0; j < n; ++j) {
+        for (int i = 0; i < n; ++i) {
+            init_u << u[j * n + i];
+            init_v << v[j * n + i];
+            if (i < n - 1) {
+                init_u << ",";
+                init_v << ",";
+            }
+        }
+        init_u << "\n";
+        init_v << "\n";
+    }
+    init_u.close();
+    init_v.close();
+    return 0;
+    }
+
+
 void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, const double &dx, double &dt,
-              double &alpha, double &beta, double &checksum){
+              double &alpha, double &beta, double &checksum, int& nsave){
 
 
     /*
@@ -114,12 +142,16 @@ void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, cons
                 v[idx] = v_val + dt * rhs_v;
             }
         }
+        if (step%nsave==0){
+            //cout << " saving at timestep " << step << std::endl;
+            write_u_v(u, v, n, step);
+        }
     }
 }
 
 int write_final(vector<double> &u, vector<double> &v, int &n){
-    ofstream outfile_u("diffusion_u.csv");
-    ofstream outfile_v("diffusion_v.csv");
+    ofstream outfile_u("data/diffusion_u.csv");
+    ofstream outfile_v("data/diffusion_v.csv");
 
     if (!outfile_u.is_open() || !outfile_v.is_open()) {
         cerr << "Error: Could not open output CSV files." << endl;
@@ -154,6 +186,8 @@ int main(int argc, char **argv) {
     // Time-stepping parameters
     double dt = 0.01;   
     int num_steps = 5000;
+    int nsave = 1000;
+
     bool random_seed = false;
     
     //tmax = 500
@@ -197,6 +231,9 @@ int main(int argc, char **argv) {
         } else if(arg=="--num_steps"){
             if ((num_steps = std::stoi(argument[i+1])) < 0) 
                 throw std::invalid_argument("num_steps must be positive (e.g. -num_steps 1000)");
+        } else if(arg=="--nsave"){
+            if ((nsave = std::stoi(argument[i+1])) < 0) 
+                throw std::invalid_argument("nsave must be positive (e.g. -nsave 1000)");
         } else if(arg=="--alpha"){
             if ((alpha = std::stod(argument[i+1])) < 0) 
                 throw std::invalid_argument("alpha must be positive (e.g. -alpha 1.1)");
@@ -240,7 +277,7 @@ int main(int argc, char **argv) {
     // -------------------------------
     auto tstart = std::chrono::high_resolution_clock::now();
     // num_steps, n, u, v, dx, alpha, beta, checksum
-    simulate(num_steps, n, u, v, dx, dt, alpha, beta, checksum);
+    simulate(num_steps, n, u, v, dx, dt, alpha, beta, checksum, nsave);
     auto tend = std::chrono::high_resolution_clock::now();
 
     // -------------------------------
