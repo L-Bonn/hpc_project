@@ -74,7 +74,8 @@ int main(int argc, char **argv) {
         }
     }
 
-
+    Ly = Lx; // dx!=dy not implemented!
+    std::cout << "Set Ly = Lx because non square is not implemented!" << std::endl;
     const double dx = Lx / n;
     const double dy = Ly / n;
 
