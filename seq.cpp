@@ -29,6 +29,33 @@ void initialise_random(vector<double> &u, vector<double> &v, int &n, int &seed, 
     }
 }
 
+int write_init(vector<double> &u, vector<double> &v, int &n){
+        // write initial conditions to file
+        ofstream init_u("initial_u.csv");
+        ofstream init_v("initial_v.csv");
+
+        if (!init_u.is_open() || !init_v.is_open()) {
+            cerr << "Error: Could not open initial condition CSV files." << endl;
+            return 1;
+        }
+
+        for (int j = 0; j < n; ++j) {
+            for (int i = 0; i < n; ++i) {
+                init_u << u[j * n + i];
+                init_v << v[j * n + i];
+                if (i < n - 1) {
+                    init_u << ",";
+                    init_v << ",";
+                }
+            }
+            init_u << "\n";
+            init_v << "\n";
+        }
+        init_u.close();
+        init_v.close();
+        return 0;
+    }
+
 void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, const double &dx, double &dt,
               double &alpha, double &beta, double &checksum){
 
@@ -96,6 +123,31 @@ void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, cons
     }
 }
 
+int write_final(vector<double> &u, vector<double> &v, int &n){
+    ofstream outfile_u("diffusion_u.csv");
+    ofstream outfile_v("diffusion_v.csv");
+
+    if (!outfile_u.is_open() || !outfile_v.is_open()) {
+        cerr << "Error: Could not open output CSV files." << endl;
+        return 1;
+    }
+
+    for (int j = 0; j < n; ++j) {
+        for (int i = 0; i < n; ++i) {
+            outfile_u << u[j * n + i];
+            outfile_v << v[j * n + i];
+            if (i < n - 1) {
+                outfile_u << ",";
+                outfile_v << ",";
+            }
+        }
+        outfile_u << "\n";
+        outfile_v << "\n";
+    }
+    outfile_u.close();
+    outfile_v.close();
+    return 0;
+}
 
 int main(int argc, char **argv) {
     // -------------------------------
@@ -184,30 +236,10 @@ int main(int argc, char **argv) {
     // -------------------------------
     // 2b) Write INITIAL conditions to CSV
     // -------------------------------
-    {
-        ofstream init_u("initial_u.csv");
-        ofstream init_v("initial_v.csv");
-
-        if (!init_u.is_open() || !init_v.is_open()) {
-            cerr << "Error: Could not open initial condition CSV files." << endl;
-            return 1;
-        }
-
-        for (int j = 0; j < n; ++j) {
-            for (int i = 0; i < n; ++i) {
-                init_u << u[j * n + i];
-                init_v << v[j * n + i];
-                if (i < n - 1) {
-                    init_u << ",";
-                    init_v << ",";
-                }
-            }
-            init_u << "\n";
-            init_v << "\n";
-        }
-        init_u.close();
-        init_v.close();
-    }
+    int init_write_ret_val;
+    init_write_ret_val = write_init(u, v, n);
+    if (init_write_ret_val==1)
+        return 1;
 
     // -------------------------------
     // 3) Main Time-Stepping Loop
@@ -222,28 +254,11 @@ int main(int argc, char **argv) {
     // -------------------------------
     // 4) Write FINAL Grids to CSV
     // -------------------------------
-    ofstream outfile_u("diffusion_u.csv");
-    ofstream outfile_v("diffusion_v.csv");
-
-    if (!outfile_u.is_open() || !outfile_v.is_open()) {
-        cerr << "Error: Could not open output CSV files." << endl;
+    int final_write_ret_val;
+    final_write_ret_val = write_final(u, v, n);
+    if (final_write_ret_val==1)
         return 1;
-    }
-
-    for (int j = 0; j < n; ++j) {
-        for (int i = 0; i < n; ++i) {
-            outfile_u << u[j * n + i];
-            outfile_v << v[j * n + i];
-            if (i < n - 1) {
-                outfile_u << ",";
-                outfile_v << ",";
-            }
-        }
-        outfile_u << "\n";
-        outfile_v << "\n";
-    }
-    outfile_u.close();
-    outfile_v.close();
+    
 
     // Print final center values for a quick check
     int center_idx = (n / 2) * n + (n / 2);
