@@ -64,9 +64,6 @@ void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, cons
     Main timestepping loop
     */
 
-    //vector<double> u_new(n * n, 0.0);
-    //vector<double> v_new(n * n, 0.0);
-
     for (int step = 0; step < num_steps; ++step) {
         
         // Update all grid points with periodic BC
@@ -103,6 +100,7 @@ void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, cons
                 // dv/dt = (αΔu + Δv) + v - (βu + v)(u^2 + v^2)
                 double mag_sq = u_val * u_val + v_val * v_val;
                 checksum += mag_sq;
+
                 double rhs_u = (lap_u - alpha * lap_v) 
                              + u_val 
                              - (u_val - beta * v_val) * mag_sq;
@@ -116,10 +114,6 @@ void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, cons
                 v[idx] = v_val + dt * rhs_v;
             }
         }
-
-        // Swap old and new
-        //u = u_new;
-        //v = v_new;
     }
 }
 
@@ -245,11 +239,9 @@ int main(int argc, char **argv) {
     // 3) Main Time-Stepping Loop
     // -------------------------------
     auto tstart = std::chrono::high_resolution_clock::now();
-
     // num_steps, n, u, v, dx, alpha, beta, checksum
     simulate(num_steps, n, u, v, dx, dt, alpha, beta, checksum);
     auto tend = std::chrono::high_resolution_clock::now();
-
 
     // -------------------------------
     // 4) Write FINAL Grids to CSV
