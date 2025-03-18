@@ -205,7 +205,7 @@ int main(int argc, char **argv) {
     for (long unsigned int i = 1; i<argument.size() ; i += 2){
         std::string arg = argument[i];
         if(arg=="-h"){ // Write help
-            std::cout << "./fwc --n <Number of grid points in each dimension>"
+            std::cout << "./seq --n <Number of grid points in each dimension>"
                       << " --Lx, Ly <Domain size in x/y-direction>"
                       << " --dt <timestep size>"
                       << " --num_steps <Number of timesteps>"
