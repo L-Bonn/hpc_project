@@ -29,6 +29,10 @@ int main() {
     const double alpha = 2.0;
     const double beta  = -0.5; 
 
+    // checksum
+    double checksum = 0;
+
+
    
     
 
@@ -120,6 +124,7 @@ int main() {
                 // du/dt = (Δu - αΔv) + u - (u - βv)(u^2 + v^2)
                 // dv/dt = (αΔu + Δv) + v - (βu + v)(u^2 + v^2)
                 double mag_sq = u_val * u_val + v_val * v_val;
+                checksum += mag_sq;
                 double rhs_u = (lap_u - alpha * lap_v) 
                              + u_val 
                              - (u_val - beta * v_val) * mag_sq;
@@ -172,6 +177,7 @@ int main() {
     cout << "Simulation complete.\n"
          << "Final u at center: " << u[center_idx] << "\n"
          << "Final v at center: " << v[center_idx] << "\n"
+         << "Checksum mag_sq: " << checksum << "\n"
          << "Initial conditions: initial_u.csv, initial_v.csv\n"
          << "Final conditions:   diffusion_u.csv, diffusion_v.csv\n";
 
