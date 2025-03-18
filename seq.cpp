@@ -4,6 +4,10 @@
 #include <cmath>
 #include <random>       // For random number generation
 #include <ctime>        // For time-based seed (optional)
+#include <chrono>
+#include <iomanip>
+
+
 
 using namespace std;
 
@@ -89,6 +93,7 @@ int main() {
     // -------------------------------
     // 3) Main Time-Stepping Loop
     // -------------------------------
+    auto tstart = std::chrono::high_resolution_clock::now();
     for (int step = 0; step < num_steps; ++step) {
         
         // Update all grid points with periodic BC
@@ -143,7 +148,7 @@ int main() {
         u = u_new;
         v = v_new;
     }
-
+    auto tend = std::chrono::high_resolution_clock::now();
 
 
     // -------------------------------
@@ -175,9 +180,10 @@ int main() {
     // Print final center values for a quick check
     int center_idx = (n / 2) * n + (n / 2);
     cout << "Simulation complete.\n"
-         << "Final u at center: " << u[center_idx] << "\n"
-         << "Final v at center: " << v[center_idx] << "\n"
-         << "Checksum mag_sq: " << checksum << "\n"
+         << "Final u at center : " << u[center_idx] << "\n"
+         << "Final v at center : " << v[center_idx] << "\n"
+         << "Checksum mag_sq   : " << checksum << "\n"
+         << "Elapsed time      :" << std::setw(6) << std::setprecision(6) << (tend - tstart).count()*1e-9 << "\n"
          << "Initial conditions: initial_u.csv, initial_v.csv\n"
          << "Final conditions:   diffusion_u.csv, diffusion_v.csv\n";
 
