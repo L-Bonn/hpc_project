@@ -158,7 +158,8 @@ int main(int argc, char **argv) {
     // 2a) Random Initial Conditions
     // -------------------------------
     // Use a Mersenne Twister PRNG and a uniform distribution [0,1].
-    std::mt19937 rng(static_cast<unsigned>(std::time(nullptr)));
+    //std::mt19937 rng(static_cast<unsigned>(std::time(nullptr)));
+    std::mt19937 rng(42);
     std::uniform_real_distribution<double> dist(-0.5, 0.5);
 
     for (int j = 0; j < n; ++j) {
