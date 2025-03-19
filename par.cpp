@@ -49,18 +49,13 @@ void write_u_v(const std::vector<grid_t> &u, const std::vector<grid_t> &v, int n
     file_v.write(reinterpret_cast<const char*>(v.data()), sizeof(grid_t) * v.size());
 }
 
+void integrate(int &n, vector<double> &u, vector<double> &v, const double &dx, double &dt,
+              double &alpha, double &beta, double &checksum){
 
-void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, const double &dx, double &dt,
-              double &alpha, double &beta, double &checksum, int& nsave){
-
-    //#pragma acc data copy(u, v)
-
-    
-    for (int step = 0; step < num_steps; ++step) {  
-
-        //#pragma acc parallel present( u , v)
-        //#pragma acc parallel loop
-        for (int idx = 0; idx < n * n; ++idx) {
+    #pragma acc parallel present(u , v, dx, dt, alpha, beta, checksum)
+    {
+    #pragma acc loop
+    for (int idx = 0; idx < n * n; ++idx) {
             int j = idx / n;
             int i = idx % n;
 
@@ -105,10 +100,25 @@ void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, cons
             u[idx] = u_val + dt * rhs_u;
             v[idx] = v_val + dt * rhs_v;
         }
+    }
+
+}
+
+
+
+void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, int Lx, int Ly, const double &dx, double &dt,
+              double &alpha, double &beta, double &checksum, int& nsave){
+
+    #pragma acc data copy(u[0:Lx*Ly], v[0:Lx*Ly], dx, dt, alpha, beta, checksum)
+    {
+    
+    for (int step = 0; step < num_steps; ++step) {  
+        integrate(n, u, v, dx, dt, alpha, beta, checksum);
         //if (step % nsave == 0) {
             // Save the state at the current timestep
          //   write_u_v(u, v, n, step);
         //}
+    }
     }
 
 }
@@ -210,7 +220,7 @@ int main(int argc, char **argv) {
     // -------------------------------
     auto tstart = std::chrono::high_resolution_clock::now();
     // num_steps, n, u, v, dx, alpha, beta, checksum
-    simulate(num_steps, n, u, v, dx, dt, alpha, beta, checksum, nsave);
+    simulate(num_steps, n, u, v, Lx, Ly, dx, dt, alpha, beta, checksum, nsave);
     auto tend = std::chrono::high_resolution_clock::now();
 
     // -------------------------------
