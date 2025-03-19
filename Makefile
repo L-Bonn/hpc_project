@@ -1,8 +1,10 @@
 # Makefile for the diffusion simulation project
 
-# Compiler and flags
-CXX = nvc++
-CXXFLAGS = -O3 -std=c++11
+CXX := nvc++
+
+CXXFLAGS := $(INCLUDE) -O3 -fast  -Wall -march=native -g -std=c++17
+
+ACC := -acc -gpu=cuda12.6 -Minfo=acc
 
 # Target executable name
 TARGET = seq
@@ -18,4 +20,12 @@ $(TARGET): $(SRC)
 clean:
 	rm -f $(TARGET)
 
-.PHONY: all clean
+.PHONY: clean all
+
+all: seq par
+
+sw_sequential: seq.cpp
+	$(CXX) $(CXXFLAGS) seq.cpp -o seq
+
+sw_parallel: par.cpp
+	$(CXX) $(CXXFLAGS) $(ACC) par.cpp -o par
