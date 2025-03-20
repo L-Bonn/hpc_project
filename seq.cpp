@@ -96,7 +96,7 @@ void integrate(int &n, vector<double> &u, vector<double> &v, const double &dx, d
             // du/dt = (Δu - αΔv) + u - (u - βv)(u^2 + v^2)
             // dv/dt = (αΔu + Δv) + v - (βu + v)(u^2 + v^2)
             double mag_sq = u_val * u_val + v_val * v_val;
-    
+            checksum += mag_sq;
             double rhs_u = (lap_u - alpha * lap_v) 
                          + u_val 
                          - (u_val - beta * v_val) * mag_sq;
