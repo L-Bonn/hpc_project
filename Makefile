@@ -10,6 +10,7 @@ ACCtroels := -acc -gpu=cuda12.6,mem:managed
 
 MINFO := #-Minfo=acc
 
+
 .PHONY: clean all
 
 all: sequential parallel troels
