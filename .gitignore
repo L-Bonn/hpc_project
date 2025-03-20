@@ -1,5 +1,6 @@
 seq
 par
+par_troels
 .ipynb_checkpoints/
 *.csv
 *.ipynb
