@@ -92,6 +92,7 @@ void integrate(int &n, vector<double> &u, vector<double> &v, const double &dx, d
             // du/dt = (Δu - αΔv) + u - (u - βv)(u^2 + v^2)
             // dv/dt = (αΔu + Δv) + v - (βu + v)(u^2 + v^2)
             double mag_sq = u_val * u_val + v_val * v_val;
+
             checksum += mag_sq;
 
             double rhs_u = (lap_u - alpha * lap_v) 
@@ -121,6 +122,7 @@ void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, int 
     {
     
     for (int step = 0; step < num_steps; ++step) {  
+        #pragma acc data copy(checksum)
         integrate(n, u, v, dx, dt, alpha, beta, checksum);
         //if (step % nsave == 0) {
             // Save the state at the current timestep
