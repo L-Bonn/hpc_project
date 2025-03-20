@@ -12,11 +12,6 @@ TARGET = seq
 # Source file
 SRC = seq.cpp
 
-all: $(TARGET)
-
-$(TARGET): $(SRC)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRC)
-
 clean:
 	rm -f $(TARGET)
 
