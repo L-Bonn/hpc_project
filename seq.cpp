@@ -6,13 +6,17 @@
 #include <ctime>        // For time-based seed (optional)
 #include <chrono>
 #include <iomanip>
+#include <numeric>
+#include <cassert>
+#include <array>
+#include <algorithm>
+
 
 
 using namespace std;
-
+using grid_t = double; 
 void initialise_random(vector<double> &u, vector<double> &v, int &n, int &seed, bool &random_seed){
-    // initialise field with random number
-    // Use a Mersenne Twister PRNG and a uniform distribution [0,1].
+
     std::mt19937 rng(seed);
     if (random_seed==true){
         std::mt19937 rng(static_cast<unsigned>(std::time(nullptr)));
@@ -29,171 +33,119 @@ void initialise_random(vector<double> &u, vector<double> &v, int &n, int &seed, 
     }
 }
 
-int write_init(vector<double> &u, vector<double> &v, int &n){
-        // write initial conditions to file
-        ofstream init_u("data/initial_u.csv");
-        ofstream init_v("data/initial_v.csv");
 
-        if (!init_u.is_open() || !init_v.is_open()) {
-            cerr << "Error: Could not open initial condition CSV files." << endl;
-            return 1;
-        }
-
-        for (int j = 0; j < n; ++j) {
-            for (int i = 0; i < n; ++i) {
-                init_u << u[j * n + i];
-                init_v << v[j * n + i];
-                if (i < n - 1) {
-                    init_u << ",";
-                    init_v << ",";
-                }
-            }
-            init_u << "\n";
-            init_v << "\n";
-        }
-        init_u.close();
-        init_v.close();
-        return 0;
-    }
-
-int write_u_v(vector<double> &u, vector<double> &v, int &n, int &frame){
+void write_u_v(const std::vector<grid_t> &u, const std::vector<grid_t> &v, int n, int frame) {
     std::string strframe = std::to_string(frame);
-    ofstream init_u("data/u"+strframe+".csv");
-    ofstream init_v("data/v"+strframe+".csv");
+    std::ofstream file_u("data/u" + strframe + ".csv");
+    std::ofstream file_v("data/v" + strframe + ".csv");
 
-    if (!init_u.is_open() || !init_v.is_open()) {
-        cerr << "Error: Could not open initial condition CSV files." << endl;
-        return 1;
+    if (!file_u.is_open() || !file_v.is_open()) {
+        std::cerr << "Error: Could not open initial condition CSV files." << std::endl;
+        return;
     }
 
-    for (int j = 0; j < n; ++j) {
-        for (int i = 0; i < n; ++i) {
-            init_u << u[j * n + i];
-            init_v << v[j * n + i];
-            if (i < n - 1) {
-                init_u << ",";
-                init_v << ",";
-            }
-        }
-        init_u << "\n";
-        init_v << "\n";
-    }
-    init_u.close();
-    init_v.close();
-    return 0;
-    }
-
-
-void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, const double &dx, double &dt,
-              double &alpha, double &beta, double &checksum, int& nsave){
-
-
-    /*
-    Main timestepping loop
-    */
-
-    for (int step = 0; step < num_steps; ++step) {
-        
-        // Update all grid points with periodic BC
+    // Write u data
+    for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
+            file_u << u[i * n + j];
+            if (j < n - 1) file_u << ",";
+        }
+        file_u << "\n";
+    }
+
+    // Write v data
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            file_v << v[i * n + j];
+            if (j < n - 1) file_v << ",";
+        }
+        file_v << "\n";
+    }
+}
+
+void integrate(int &n, vector<double> &u, vector<double> &v, const double &dx, double &dt,
+              double &alpha, double &beta,  double &checksum){
+
+    for (int idx = 0; idx < n * n; ++idx) {
+
+
+            int j = idx / n;
+            int i = idx % n;
+
             int jm = (j - 1 + n) % n;  
             int jp = (j + 1) % n;
+            int im = (i - 1 + n) % n;  
+            int ip = (i + 1) % n;
 
-            for (int i = 0; i < n; ++i) {
-                int im = (i - 1 + n) % n;  
-                int ip = (i + 1) % n;
+            double u_val = u[idx];
+            double v_val = v[idx];
+            // Periodic neighbors
+            double u_ip = u[j * n + ip];
+            double u_im = u[j * n + im];
+            double u_jp = u[jp * n + i];
+            double u_jm = u[jm * n + i];
 
-                int idx = j * n + i;
+            double v_ip = v[j * n + ip];
+            double v_im = v[j * n + im];
+            double v_jp = v[jp * n + i];
+            double v_jm = v[jm * n + i];
+            // Laplacians (5-point stencil, dx=dy)
+            double lap_u = (u_ip + u_im + u_jp + u_jm - 4.0 * u_val) / (dx * dx);
+            double lap_v = (v_ip + v_im + v_jp + v_jm - 4.0 * v_val) / (dx * dx);
+            // PDE system:
+            // du/dt = (Δu - αΔv) + u - (u - βv)(u^2 + v^2)
+            // dv/dt = (αΔu + Δv) + v - (βu + v)(u^2 + v^2)
+            double mag_sq = u_val * u_val + v_val * v_val;
+    
+            double rhs_u = (lap_u - alpha * lap_v) 
+                         + u_val 
+                         - (u_val - beta * v_val) * mag_sq;
 
-                double u_val = u[idx];
-                double v_val = v[idx];
+            double rhs_v = (alpha * lap_u + lap_v) 
+                         + v_val 
+                         - (beta * u_val + v_val) * mag_sq;
+        
+            // Explicit update
+            u[idx] = u_val + dt * rhs_u;
+            v[idx] = v_val + dt * rhs_v;
+            
 
-                // Periodic neighbors
-                double u_ip = u[j * n + ip];
-                double u_im = u[j * n + im];
-                double u_jp = u[jp * n + i];
-                double u_jm = u[jm * n + i];
-
-                double v_ip = v[j * n + ip];
-                double v_im = v[j * n + im];
-                double v_jp = v[jp * n + i];
-                double v_jm = v[jm * n + i];
-
-                // Laplacians (5-point stencil, dx=dy)
-                double lap_u = (u_ip + u_im + u_jp + u_jm - 4.0 * u_val) / (dx * dx);
-                double lap_v = (v_ip + v_im + v_jp + v_jm - 4.0 * v_val) / (dx * dx);
-
-                // PDE system:
-                // du/dt = (Δu - αΔv) + u - (u - βv)(u^2 + v^2)
-                // dv/dt = (αΔu + Δv) + v - (βu + v)(u^2 + v^2)
-                double mag_sq = u_val * u_val + v_val * v_val;
-                checksum += mag_sq;
-
-                double rhs_u = (lap_u - alpha * lap_v) 
-                             + u_val 
-                             - (u_val - beta * v_val) * mag_sq;
-
-                double rhs_v = (alpha * lap_u + lap_v) 
-                             + v_val 
-                             - (beta * u_val + v_val) * mag_sq;
-
-                // Explicit update
-                u[idx] = u_val + dt * rhs_u;
-                v[idx] = v_val + dt * rhs_v;
-            }
         }
-        if (step%nsave==0){
-            //cout << " saving at timestep " << step << std::endl;
+    
+
+}
+
+
+
+void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, int Lx, int Ly, const double &dx, double &dt,
+              double &alpha, double &beta, double &checksum, int& nsave){
+    
+    for (int step = 0; step < num_steps; ++step) {
+        integrate(n, u, v, dx, dt, alpha, beta, checksum);
+        if (step % nsave == 0) {
             write_u_v(u, v, n, step);
         }
     }
+    
+
 }
 
-int write_final(vector<double> &u, vector<double> &v, int &n){
-    ofstream outfile_u("data/diffusion_u.csv");
-    ofstream outfile_v("data/diffusion_v.csv");
 
-    if (!outfile_u.is_open() || !outfile_v.is_open()) {
-        cerr << "Error: Could not open output CSV files." << endl;
-        return 1;
-    }
-
-    for (int j = 0; j < n; ++j) {
-        for (int i = 0; i < n; ++i) {
-            outfile_u << u[j * n + i];
-            outfile_v << v[j * n + i];
-            if (i < n - 1) {
-                outfile_u << ",";
-                outfile_v << ",";
-            }
-        }
-        outfile_u << "\n";
-        outfile_v << "\n";
-    }
-    outfile_u.close();
-    outfile_v.close();
-    return 0;
-}
 
 int main(int argc, char **argv) {
     // -------------------------------
     // 1) Simulation Parameters
     // -------------------------------
-    int n = 200;          // Number of grid points in each dimension
-    double Lx = 200.0;      // Domain size in x-direction
-    double Ly = 200.0;      // Domain size in y-direction
+    int n = 500;          // Number of grid points in each dimension
+    double Lx = 500.0;      // Domain size in x-direction
+    double Ly = 500.0;      // Domain size in y-direction
 
     // Time-stepping parameters
     double dt = 0.01;   
-    int num_steps = 5000;
-    int nsave = 1000;
+    int num_steps = 50000;
+    int nsave = 500;
 
     bool random_seed = false;
-    
-    //tmax = 500
-    //dt
-    // PDE parameters
-    //const double alpha = 1.0;
     double alpha = 2.0;
     double beta  = -0.5; 
 
@@ -258,35 +210,18 @@ int main(int argc, char **argv) {
     vector<double> u(n * n, 0.0);
     vector<double> v(n * n, 0.0);
 
-    // -------------------------------
-    // 2a) Random Initial Conditions
-    // -------------------------------
     int seed = 42;
     initialise_random(u, v, n, seed, random_seed);
 
-    // -------------------------------
-    // 2b) Write INITIAL conditions to CSV
-    // -------------------------------
-    int init_write_ret_val;
-    init_write_ret_val = write_init(u, v, n);
-    if (init_write_ret_val==1)
-        return 1;
 
-    // -------------------------------
-    // 3) Main Time-Stepping Loop
-    // -------------------------------
+ 
     auto tstart = std::chrono::high_resolution_clock::now();
     // num_steps, n, u, v, dx, alpha, beta, checksum
-    simulate(num_steps, n, u, v, dx, dt, alpha, beta, checksum, nsave);
+    simulate(num_steps, n, u, v, Lx, Ly, dx, dt, alpha, beta, checksum, nsave);
     auto tend = std::chrono::high_resolution_clock::now();
 
-    // -------------------------------
-    // 4) Write FINAL Grids to CSV
-    // -------------------------------
-    int final_write_ret_val;
-    final_write_ret_val = write_final(u, v, n);
-    if (final_write_ret_val==1)
-        return 1;
+ 
+
     
 
     // Print final center values for a quick check
@@ -295,9 +230,7 @@ int main(int argc, char **argv) {
          << "Final u at center : " << u[center_idx] << "\n"
          << "Final v at center : " << v[center_idx] << "\n"
          << "Checksum mag_sq   : " << checksum << "\n"
-         << "Elapsed time [s]  : " << std::setw(6) << std::setprecision(5) << (tend - tstart).count()*1e-9 << "\n"
-         << "Initial conditions: initial_u.csv, initial_v.csv\n"
-         << "Final conditions:   diffusion_u.csv, diffusion_v.csv\n";
+         << "Elapsed time [s]  : " << std::setw(6) << std::setprecision(5) << (tend - tstart).count()*1e-9 << "\n";
 
     return 0;
 }

@@ -1,4 +1,7 @@
 seq
+par
 .ipynb_checkpoints/
 *.csv
 *.ipynb
+*.nsys-rep
+*.sqlite
