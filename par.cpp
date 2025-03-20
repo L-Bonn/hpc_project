@@ -109,7 +109,7 @@ void integrate(int &n, vector<double> &u, vector<double> &v, const double &dx, d
 void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, int Lx, int Ly, const double &dx, double &dt,
               double &alpha, double &beta, double &checksum, int& nsave){
 
-    #pragma acc data copy(n, u[0:Lx*Ly], v[0:Lx*Ly], dx, dt, alpha, beta, checksum)
+    #pragma acc data copy(n, u[0:n*n], v[0:n*n], dx, dt, alpha, beta, checksum)
     {
     
     for (int step = 0; step < num_steps; ++step) {  
