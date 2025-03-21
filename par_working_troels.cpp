@@ -49,8 +49,9 @@ void write_u_v(const std::vector<grid_t> &u, const std::vector<grid_t> &v, int n
     file_v.write(reinterpret_cast<const char*>(v.data()), sizeof(grid_t) * v.size());
 }
 
-void integrate(int &n, vector<double> &u, vector<double> &v, const double &dx, double &dt,
-              double &alpha, double &beta, double &checksum){
+void integrate(int &n, vector<double> &u, vector<double> &v, vector<double> &u_new, vector<double> &v_new,
+               const double &dx, double &dt,
+               double &alpha, double &beta, double &checksum){
 
     if (v.empty()) {
     std::cerr << "Error: v is empty!" << std::endl;
@@ -104,11 +105,17 @@ void integrate(int &n, vector<double> &u, vector<double> &v, const double &dx, d
                          - (beta * u_val + v_val) * mag_sq;
 
             // Explicit update
-            u[idx] = u_val + dt * rhs_u;
-            v[idx] = v_val + dt * rhs_v;
+            u_new[idx] = u_val + dt * rhs_u;
+            v_new[idx] = v_val + dt * rhs_v;
         }
     }
     #pragma acc update host(checksum)
+
+    #pragma acc parallel loop present(u, v, u_new, v_new)
+    for (int idx = 0; idx < n * n; ++idx) {
+        u[idx] = u_new[idx];
+        v[idx] = v_new[idx];
+    }
 
 }
 
@@ -118,12 +125,17 @@ void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, int 
               double &alpha, double &beta, double &checksum, int& nsave){
 
     //#pragma acc data copyin(n, u[0:Lx*Ly], v[0:Lx*Ly], dx, dt, alpha, beta) copy(checksum)
-    #pragma acc data copyin(n, u, v, dx, dt, alpha, beta,checksum)
+
+    vector<double> u_new(n * n, 0.0);  // Declare once
+    vector<double> v_new(n * n, 0.0);  // Declare once
+
+
+    #pragma acc data copyin(n, u, v, u_new, v_new, dx, dt, alpha, beta,checksum)
     {
     
     for (int step = 0; step < num_steps; ++step) {  
         #pragma acc data copy(checksum)
-        integrate(n, u, v, dx, dt, alpha, beta, checksum);
+        integrate(n, u, v, u_new, v_new, dx, dt, alpha, beta, checksum);
         //if (step % nsave == 0) {
             // Save the state at the current timestep
          //   write_u_v(u, v, n, step);
