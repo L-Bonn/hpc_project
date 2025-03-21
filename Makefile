@@ -13,7 +13,7 @@ MINFO := #-Minfo=acc
 
 .PHONY: clean all
 
-all: sequential parallel troels
+all: sequential parallel parallel_v2 troels
 
 sequential: seq.cpp
 	$(CXX) $(CXXFLAGS) seq.cpp -o seq
@@ -21,8 +21,11 @@ sequential: seq.cpp
 parallel: par.cpp
 	$(CXX) $(CXXFLAGS) $(ACC) $(MINFO) par.cpp -o par
 
+parallel_v2: par_v2.cpp
+	$(CXX) $(CXXFLAGS) $(ACC) $(MINFO) par_v2.cpp -o par_v2
+
 troels: par_working_troels.cpp
 	$(CXX) $(CXXFLAGS) $(ACCtroels) $(MINFO) par_working_troels.cpp -o par_troels
 
 clean:
-	rm -f seq par par_troels
+	rm -f seq par par_v2 par_troels
