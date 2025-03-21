@@ -37,83 +37,108 @@ void initialise_random(vector<double> &u, vector<double> &v, int &n, int &seed, 
 using grid_t = double; 
 void write_u_v(const std::vector<grid_t> &u, const std::vector<grid_t> &v, int n, int frame) {
     std::string strframe = std::to_string(frame);
-    std::ofstream file_u("data/u" + strframe + ".csv", std::ios::binary);
-    std::ofstream file_v("data/v" + strframe + ".csv", std::ios::binary);
+    std::ofstream file_u("data/u" + strframe + ".csv");
+    std::ofstream file_v("data/v" + strframe + ".csv");
 
     if (!file_u.is_open() || !file_v.is_open()) {
         std::cerr << "Error: Could not open initial condition CSV files." << std::endl;
         return;
     }
 
-    file_u.write(reinterpret_cast<const char*>(u.data()), sizeof(grid_t) * u.size());
-    file_v.write(reinterpret_cast<const char*>(v.data()), sizeof(grid_t) * v.size());
+    // Write u data
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            file_u << u[i * n + j];
+            if (j < n - 1) file_u << ",";
+        }
+        file_u << "\n";
+    }
+
+    // Write v data
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            file_v << v[i * n + j];
+            if (j < n - 1) file_v << ",";
+        }
+        file_v << "\n";
+    }
 }
 
-void integrate(int &n, vector<double> &u, vector<double> &v, const double &dx, double &dt,
-              double &alpha, double &beta, double &checksum){
+void integrate(int &n, vector<double> &u, vector<double> &v, vector<double> &u_new, vector<double> &v_new, const double &dx, double &dt,
+double &alpha, double &beta, double &checksum){
 
-    #pragma acc parallel present(n, u , v, dx, dt, alpha, beta, checksum)
+
+    #pragma acc parallel present(u,v) reduction(+:checksum)
     {
     #pragma acc loop
     for (int idx = 0; idx < n * n; ++idx) {
             int j = idx / n;
             int i = idx % n;
-
-            int jm = (j - 1 + n) % n;  
+    
+            int jm = (j - 1 + n) % n;
             int jp = (j + 1) % n;
-            int im = (i - 1 + n) % n;  
+            int im = (i - 1 + n) % n;
             int ip = (i + 1) % n;
-
+    
             double u_val = u[idx];
             double v_val = v[idx];
-
+    
             // Periodic neighbors
             double u_ip = u[j * n + ip];
             double u_im = u[j * n + im];
             double u_jp = u[jp * n + i];
             double u_jm = u[jm * n + i];
-
+    
             double v_ip = v[j * n + ip];
             double v_im = v[j * n + im];
             double v_jp = v[jp * n + i];
             double v_jm = v[jm * n + i];
-
+    
             // Laplacians (5-point stencil, dx=dy)
             double lap_u = (u_ip + u_im + u_jp + u_jm - 4.0 * u_val) / (dx * dx);
             double lap_v = (v_ip + v_im + v_jp + v_jm - 4.0 * v_val) / (dx * dx);
-
+    
             // PDE system:
             // du/dt = (Δu - αΔv) + u - (u - βv)(u^2 + v^2)
             // dv/dt = (αΔu + Δv) + v - (βu + v)(u^2 + v^2)
             double mag_sq = u_val * u_val + v_val * v_val;
             checksum += mag_sq;
-
-            double rhs_u = (lap_u - alpha * lap_v) 
-                         + u_val 
+    
+            double rhs_u = (lap_u - alpha * lap_v)
+                         + u_val
                          - (u_val - beta * v_val) * mag_sq;
-
-            double rhs_v = (alpha * lap_u + lap_v) 
-                         + v_val 
+    
+            double rhs_v = (alpha * lap_u + lap_v)
+                         + v_val
                          - (beta * u_val + v_val) * mag_sq;
-
+    
             // Explicit update
-            u[idx] = u_val + dt * rhs_u;
-            v[idx] = v_val + dt * rhs_v;
+            //u[idx] = u_val + dt * rhs_u;
+            //v[idx] = v_val + dt * rhs_v;
+    
+            u_new[idx] = u_val + dt * rhs_u;
+            v_new[idx] = v_val + dt * rhs_v;
         }
+    
     }
+    u = u_new;
+    v = v_new;
+    
 
-}
+    }
 
 
 
 void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, int Lx, int Ly, const double &dx, double &dt,
               double &alpha, double &beta, double &checksum, int& nsave){
 
-    #pragma acc data copy(n, u[0:n*n], v[0:n*n], dx, dt, alpha, beta, checksum)
-    {
+    vector<double> u_new(n * n, 0.0);  // Declare once
+    vector<double> v_new(n * n, 0.0);  // Declare once
     
+    #pragma acc data copyin(u, v) copy(checksum)
+    {
     for (int step = 0; step < num_steps; ++step) {  
-        integrate(n, u, v, dx, dt, alpha, beta, checksum);
+        integrate(n, u, v, u_new, v_new, dx, dt, alpha, beta, checksum);
         //if (step % nsave == 0) {
             // Save the state at the current timestep
          //   write_u_v(u, v, n, step);
@@ -121,8 +146,8 @@ void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, int 
     }
     }
 
-}
 
+}
 
 
 int main(int argc, char **argv) {
@@ -135,7 +160,7 @@ int main(int argc, char **argv) {
 
     // Time-stepping parameters
     double dt = 0.01;   
-    int num_steps = 5000;
+    int num_steps = 10000;
     int nsave = 1000;
 
     bool random_seed = false;
@@ -207,6 +232,7 @@ int main(int argc, char **argv) {
     // -------------------------------
     vector<double> u(n * n, 0.0);
     vector<double> v(n * n, 0.0);
+
 
     // -------------------------------
     // 2a) Random Initial Conditions
