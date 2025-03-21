@@ -4,7 +4,7 @@ CXX := nvc++
 
 CXXFLAGS := $(INCLUDE) -O3 -fast  -Wall -march=native -g -std=c++17
 
-ACC := -acc -gpu=cuda12.6 
+ACC := -acc -gpu=cuda12.6,mem:managed 
 
 ACCtroels := -acc -gpu=cuda12.6,mem:managed 
 
