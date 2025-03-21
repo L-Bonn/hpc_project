@@ -160,7 +160,7 @@ int main(int argc, char **argv) {
 
     // Time-stepping parameters
     double dt = 0.01;   
-    int num_steps = 10000;
+    int num_steps = 5000;
     int nsave = 1000;
 
     bool random_seed = false;
