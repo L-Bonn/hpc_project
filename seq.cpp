@@ -63,55 +63,57 @@ void write_u_v(const std::vector<grid_t> &u, const std::vector<grid_t> &v, int n
     }
 }
 
-void integrate(int &n, vector<double> &u, vector<double> &v, const double &dx, double &dt,
+void integrate(int &n, vector<double> &u, vector<double> &v, vector<double> &u_new, vector<double> &v_new, const double &dx, double &dt,
               double &alpha, double &beta,  double &checksum){
-
+    
     for (int idx = 0; idx < n * n; ++idx) {
 
+        int j = idx / n;
+        int i = idx % n;
 
-            int j = idx / n;
-            int i = idx % n;
+        int jm = (j - 1 + n) % n;  
+        int jp = (j + 1) % n;
+        int im = (i - 1 + n) % n;  
+        int ip = (i + 1) % n;
 
-            int jm = (j - 1 + n) % n;  
-            int jp = (j + 1) % n;
-            int im = (i - 1 + n) % n;  
-            int ip = (i + 1) % n;
+        double u_val = u[idx];
+        double v_val = v[idx];
+        // Periodic neighbors
+        double u_ip = u[j * n + ip];
+        double u_im = u[j * n + im];
+        double u_jp = u[jp * n + i];
+        double u_jm = u[jm * n + i];
 
-            double u_val = u[idx];
-            double v_val = v[idx];
-            // Periodic neighbors
-            double u_ip = u[j * n + ip];
-            double u_im = u[j * n + im];
-            double u_jp = u[jp * n + i];
-            double u_jm = u[jm * n + i];
+        double v_ip = v[j * n + ip];
+        double v_im = v[j * n + im];
+        double v_jp = v[jp * n + i];
+        double v_jm = v[jm * n + i];
+        // Laplacians (5-point stencil, dx=dy)
+        double lap_u = (u_ip + u_im + u_jp + u_jm - 4.0 * u_val) / (dx * dx);
+        double lap_v = (v_ip + v_im + v_jp + v_jm - 4.0 * v_val) / (dx * dx);
+        // PDE system:
+        // du/dt = (Δu - αΔv) + u - (u - βv)(u^2 + v^2)
+        // dv/dt = (αΔu + Δv) + v - (βu + v)(u^2 + v^2)
+        double mag_sq = u_val * u_val + v_val * v_val;
+        checksum += mag_sq;
+        double rhs_u = (lap_u - alpha * lap_v) 
+                     + u_val 
+                     - (u_val - beta * v_val) * mag_sq;
 
-            double v_ip = v[j * n + ip];
-            double v_im = v[j * n + im];
-            double v_jp = v[jp * n + i];
-            double v_jm = v[jm * n + i];
-            // Laplacians (5-point stencil, dx=dy)
-            double lap_u = (u_ip + u_im + u_jp + u_jm - 4.0 * u_val) / (dx * dx);
-            double lap_v = (v_ip + v_im + v_jp + v_jm - 4.0 * v_val) / (dx * dx);
-            // PDE system:
-            // du/dt = (Δu - αΔv) + u - (u - βv)(u^2 + v^2)
-            // dv/dt = (αΔu + Δv) + v - (βu + v)(u^2 + v^2)
-            double mag_sq = u_val * u_val + v_val * v_val;
-            checksum += mag_sq;
-            double rhs_u = (lap_u - alpha * lap_v) 
-                         + u_val 
-                         - (u_val - beta * v_val) * mag_sq;
-
-            double rhs_v = (alpha * lap_u + lap_v) 
-                         + v_val 
-                         - (beta * u_val + v_val) * mag_sq;
-        
-            // Explicit update
-            u[idx] = u_val + dt * rhs_u;
-            v[idx] = v_val + dt * rhs_v;
-            
-
-        }
+        double rhs_v = (alpha * lap_u + lap_v) 
+                     + v_val 
+                     - (beta * u_val + v_val) * mag_sq;
     
+        // Explicit update
+        //u[idx] = u_val + dt * rhs_u;
+        //v[idx] = v_val + dt * rhs_v;
+
+        u_new[idx] = u_val + dt * rhs_u;
+        v_new[idx] = v_val + dt * rhs_v;
+
+    }
+        u = u_new;
+        v = v_new;
 
 }
 
@@ -120,11 +122,13 @@ void integrate(int &n, vector<double> &u, vector<double> &v, const double &dx, d
 void simulate(int &num_steps, int &n, vector<double> &u, vector<double> &v, int Lx, int Ly, const double &dx, double &dt,
               double &alpha, double &beta, double &checksum, int& nsave){
     
+    vector<double> u_new(n * n, 0.0);
+    vector<double> v_new(n * n, 0.0);
     for (int step = 0; step < num_steps; ++step) {
-        integrate(n, u, v, dx, dt, alpha, beta, checksum);
-        if (step % nsave == 0) {
-            write_u_v(u, v, n, step);
-        }
+        integrate(n, u, v, u_new, v_new, dx, dt, alpha, beta, checksum);
+        //if (step % nsave == 0) {
+        //    write_u_v(u, v, n, step);
+        //}
     }
     
 
@@ -136,15 +140,15 @@ int main(int argc, char **argv) {
     // -------------------------------
     // 1) Simulation Parameters
     // -------------------------------
-    int n = 500;          // Number of grid points in each dimension
-    double Lx = 500.0;      // Domain size in x-direction
-    double Ly = 500.0;      // Domain size in y-direction
+    int n = 200;          // Number of grid points in each dimension
+    double Lx = 200.0;      // Domain size in x-direction
+    double Ly = 200.0;      // Domain size in y-direction
 
     // Time-stepping parameters
     double dt = 0.01;   
-    int num_steps = 50000;
-    int nsave = 500;
-
+    int num_steps = 10000;
+    int nsave = 1000;
+    
     bool random_seed = false;
     double alpha = 2.0;
     double beta  = -0.5; 
@@ -222,7 +226,6 @@ int main(int argc, char **argv) {
 
  
 
-    
 
     // Print final center values for a quick check
     int center_idx = (n / 2) * n + (n / 2);
