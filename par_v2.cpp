@@ -97,8 +97,6 @@ double &alpha, double &beta, double &checksum){
             double lap_v = (v_ip + v_im + v_jp + v_jm - 4.0 * v_val) / (dx * dx);
     
             // PDE system:
-            // du/dt = (Δu - αΔv) + u - (u - βv)(u^2 + v^2)
-            // dv/dt = (αΔu + Δv) + v - (βu + v)(u^2 + v^2)
             double mag_sq = u_val * u_val + v_val * v_val;
             checksum += mag_sq;
     

@@ -89,9 +89,7 @@ void integrate(int &n, vector<double> &u, vector<double> &v, vector<double> &u_n
             double lap_u = (u_ip + u_im + u_jp + u_jm - 4.0 * u_val) / (dx * dx);
             double lap_v = (v_ip + v_im + v_jp + v_jm - 4.0 * v_val) / (dx * dx);
 
-            // PDE system:
-            // du/dt = (Δu - αΔv) + u - (u - βv)(u^2 + v^2)
-            // dv/dt = (αΔu + Δv) + v - (βu + v)(u^2 + v^2)
+            // PDE system:  
             double mag_sq = u_val * u_val + v_val * v_val;
 
             checksum += mag_sq;
