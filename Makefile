@@ -22,7 +22,7 @@ par: par.cpp
 par_v2: par_v2.cpp
 	$(CXX) $(CXXFLAGS) $(ACC) $(MINFO) par_v2.cpp -o par_v2
 
-par_troels: par_v1.cpp
+par_v1: par_v1.cpp
 	$(CXX) $(CXXFLAGS) $(ACC) $(MINFO) par_v1.cpp -o par_v1
 
 clean:
